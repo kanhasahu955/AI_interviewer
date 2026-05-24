@@ -26,9 +26,6 @@ dependencies = [
     "pydantic",
     "pydantic-settings",
     "python-dotenv",
-    "ipykernel",
-    "jupyter",
-    "streamlit",
     "langchain-ollama",
     "pinecone",
     "python-multipart",
@@ -78,4 +75,11 @@ dependencies = [
     "livekit-plugins-openai>=1.5.12",
     "livekit-plugins-silero>=1.5.12",
     "livekit-plugins-simli>=1.5.12",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel",
+    "jupyter",
+    "streamlit",
 ]

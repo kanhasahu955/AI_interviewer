@@ -28,9 +28,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
-    UV_COMPILE_BYTECODE=1 \
+    UV_COMPILE_BYTECODE=0 \
     UV_LINK_MODE=copy \
-    UV_PROJECT_ENVIRONMENT=/opt/venv
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_CONCURRENT_DOWNLOADS=2 \
+    CMAKE_BUILD_PARALLEL_LEVEL=1 \
+    MAKEFLAGS="-j1"
 
 # System deps for native wheels (opencv/insightface/mediapipe/onnxruntime/audio).
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -59,8 +62,10 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY uv.lock* ./
 
+# Install python deps first for caching (split steps so build logs show progress).
+RUN uv venv /opt/venv
+
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv venv /opt/venv && \
     uv sync --no-dev --frozen 2>/dev/null || uv sync --no-dev
 
 # ──────────────────────────── runtime ──────────────────────────────────────

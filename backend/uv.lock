@@ -1971,8 +1971,6 @@ dependencies = [
     { name = "httpx" },
     { name = "insightface" },
     { name = "instructor" },
-    { name = "ipykernel" },
-    { name = "jupyter" },
     { name = "langchain" },
     { name = "langchain-anthropic" },
     { name = "langchain-cohere" },
@@ -2026,11 +2024,17 @@ dependencies = [
     { name = "soundfile" },
     { name = "sqlalchemy" },
     { name = "sqlmodel" },
-    { name = "streamlit" },
     { name = "tiktoken" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "websocket-client" },
     { name = "websockets" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "ipykernel" },
+    { name = "jupyter" },
+    { name = "streamlit" },
 ]
 
 [package.metadata]
@@ -2049,8 +2053,6 @@ requires-dist = [
     { name = "httpx" },
     { name = "insightface" },
     { name = "instructor" },
-    { name = "ipykernel" },
-    { name = "jupyter" },
     { name = "langchain" },
     { name = "langchain-anthropic" },
     { name = "langchain-cohere" },
@@ -2103,11 +2105,17 @@ requires-dist = [
     { name = "soundfile" },
     { name = "sqlalchemy" },
     { name = "sqlmodel" },
-    { name = "streamlit" },
     { name = "tiktoken" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "websocket-client" },
     { name = "websockets" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "ipykernel" },
+    { name = "jupyter" },
+    { name = "streamlit" },
 ]
 
 [[package]]
