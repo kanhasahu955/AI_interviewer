@@ -72,6 +72,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    pull_policy: never
     platform: linux/amd64
     env_file:
       - .env
@@ -99,6 +100,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    pull_policy: never
     platform: linux/amd64
     env_file:
       - .env

@@ -220,6 +220,7 @@ make hostinger-ps      # status
 
 | Issue | Fix |
 |-------|-----|
+| `pull access denied for interviewer-ai` | Image is **local only** — run `docker compose -f docker-compose.hostinger.yml build` then `up -d --build` (never `docker pull interviewer-ai`) |
 | 502 from nginx | `docker compose ... logs api` — wait for health check |
 | Agent not speaking | `logs livekit-agent` — look for `Simli avatar video live` |
 | Out of memory | Upgrade to 8 GB VPS or set `SIMLI_ENABLED=false` |
