@@ -1,0 +1,16 @@
+# LiveKit Cloud agent deploy — fill subdomain from your LIVEKIT_URL
+# e.g. wss://agenticai-sbtpkmom.livekit.cloud → subdomain = agenticai-sbtpkmom
+#
+# Deploy (from backend/):
+#   brew install livekit-cli
+#   lk cloud auth
+#   lk agent create --region us-east
+#   lk agent deploy --secrets-file ../.env.secrets
+#
+# Docs: https://docs.livekit.io/deploy/agents/quickstart/
+
+[project]
+  subdomain = "YOUR_LIVEKIT_SUBDOMAIN"
+
+[agent]
+  id = "interviewer-ai"

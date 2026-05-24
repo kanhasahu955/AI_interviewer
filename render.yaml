@@ -1,12 +1,5 @@
-# Render Blueprint — Interviewer AI
-# Deploy: Render Dashboard → New → Blueprint → connect this repo.
-#
-# Cost note (important):
-#   - Static site (interviewer-web): free
-#   - API + workers: need Starter ($7/service/mo) to stay always-on.
-#     Free web tier sleeps after ~15 min — LiveKit agent + voice will NOT work on free.
-#   - Redis: use Upstash free tier → set REDIS_URL in the env group (Render Redis is paid).
-#   - DB: keep Snowflake (your .env) or any external MySQL — Render has no free MySQL.
+# Render Blueprint — PAID path (~$21/mo for always-on voice).
+# For FREE deploy without card, see DEPLOY_FREE.md (Cloudflare Pages + LiveKit Cloud agent).
 
 envVarGroups:
   - name: interviewer-backend

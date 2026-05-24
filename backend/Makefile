@@ -22,6 +22,7 @@ ENV_FILE       ?= .env
         mysql-up mysql-down mysql-logs mysql-shell redis-up redis-down quickstart \
         docker-build docker-up docker-down docker-logs docker-ps docker-shell \
         docker-rebuild docker-clean docker-health \
+        hostinger-build-web hostinger-up hostinger-down hostinger-logs hostinger-ps \
         format lint parse-check clean nuke
 
 help: ## Show this help.
@@ -276,6 +277,23 @@ docker-shell: ## Open a shell inside the api container.
 docker-health: ## Hit the API health endpoint from the host.
 	@curl -fsS http://localhost:$${API_PORT_HOST:-8000}/api/v1/health | $(PYTHON) -m json.tool 2>/dev/null \
 	  || curl -fsS http://localhost:$${API_PORT_HOST:-8000}/api/v1/health
+
+HOSTINGER_COMPOSE := docker compose -f docker-compose.hostinger.yml
+
+hostinger-build-web: ## Build React app for same-origin nginx deploy.
+	@bash deploy/hostinger/build-frontend.sh
+
+hostinger-up: env-check ## Hostinger VPS: build images + start redis/api/worker/livekit/nginx.
+	$(HOSTINGER_COMPOSE) up -d --build
+
+hostinger-down: ## Stop Hostinger stack.
+	$(HOSTINGER_COMPOSE) down
+
+hostinger-logs: ## Tail Hostinger stack logs.
+	$(HOSTINGER_COMPOSE) logs -f --tail=200
+
+hostinger-ps: ## Show Hostinger stack status.
+	$(HOSTINGER_COMPOSE) ps
 
 # ─────────────────────────── tooling ──────────────────────────────────────────
 

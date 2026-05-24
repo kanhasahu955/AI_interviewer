@@ -96,7 +96,7 @@ WORKDIR /app
 COPY --chown=app:app . /app
 
 RUN mkdir -p /app/storage/resumes && chown -R app:app /app \
-    && chmod +x /app/scripts/start-api.sh
+    && chmod +x /app/scripts/start-api.sh /app/scripts/start-api-and-worker.sh
 
 USER app
 

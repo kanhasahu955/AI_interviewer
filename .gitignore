@@ -42,6 +42,8 @@ backend/.env
 backend/.env.bak
 backend/.env.*
 !backend/.env.example
+backend/.env.agent
+backend/.env.secrets
 web/.env
 web/.env.local
 
