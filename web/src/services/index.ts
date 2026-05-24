@@ -1,0 +1,7 @@
+export { authService } from '@/services/AuthService'
+export { userService } from '@/services/UserService'
+export { interviewService } from '@/services/InterviewService'
+export { jdService } from '@/services/JdService'
+export { resumeService } from '@/services/ResumeService'
+export { reportService } from '@/services/ReportService'
+export { proctoringService } from '@/services/ProctoringService'

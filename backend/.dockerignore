@@ -1,0 +1,35 @@
+# Local virtualenv
+.venv/
+venv/
+
+# Python caches
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Dev artefacts
+.run/
+.run/logs/
+storage/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Git / docs
+.git/
+.gitignore
+*.md
+!README.md
+
+# Docker artefacts
+Dockerfile
+docker-compose*.yml
+.dockerignore

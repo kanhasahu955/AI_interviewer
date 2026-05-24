@@ -1,0 +1,124 @@
+name: interviewer-ai
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-password}
+      MYSQL_DATABASE: ${MYSQL_DB:-interviewer_ai}
+      MYSQL_USER: ${MYSQL_USER:-app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
+    ports:
+      - "${MYSQL_PORT_HOST:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_PASSWORD:-password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT_HOST:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: interviewer-ai:latest
+    platform: linux/amd64
+    env_file:
+      - .env
+    environment:
+      # Override .env so the containers talk to each other, not the host.
+      DB_PROVIDER: mysql
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_DB: ${MYSQL_DB:-interviewer_ai}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      APP_ENV: ${APP_ENV:-production}
+    ports:
+      - "${API_PORT_HOST:-8000}:8000"
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    image: interviewer-ai:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    env_file:
+      - .env
+    environment:
+      DB_PROVIDER: mysql
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_DB: ${MYSQL_DB:-interviewer_ai}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      APP_ENV: ${APP_ENV:-production}
+    command: ["python", "-m", "app.jobs.worker"]
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+
+  livekit-agent:
+    image: interviewer-ai:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    env_file:
+      - .env
+    environment:
+      DB_PROVIDER: mysql
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_DB: ${MYSQL_DB:-interviewer_ai}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      APP_ENV: ${APP_ENV:-production}
+    command: ["python", "-m", "app.livekit_agent.worker", "dev"]
+    depends_on:
+      api:
+        condition: service_healthy
+    # LiveKit agent talks out to LiveKit Cloud, so no extra ports needed.
+
+volumes:
+  mysql_data:
+  redis_data:
+  app_storage:

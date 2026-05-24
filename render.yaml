@@ -1,0 +1,120 @@
+# Render Blueprint — Interviewer AI
+# Deploy: Render Dashboard → New → Blueprint → connect this repo.
+#
+# Cost note (important):
+#   - Static site (interviewer-web): free
+#   - API + workers: need Starter ($7/service/mo) to stay always-on.
+#     Free web tier sleeps after ~15 min — LiveKit agent + voice will NOT work on free.
+#   - Redis: use Upstash free tier → set REDIS_URL in the env group (Render Redis is paid).
+#   - DB: keep Snowflake (your .env) or any external MySQL — Render has no free MySQL.
+
+envVarGroups:
+  - name: interviewer-backend
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: USE_REDIS_QUEUE
+        value: "true"
+      - key: LIVEPORTRAIT_ENABLED
+        value: "false"
+      - key: STORAGE_TYPE
+        value: local
+      - key: STORAGE_PATH
+        value: storage
+      # ── Set in Render Dashboard (sync: false = you paste values) ──
+      - key: SECRET_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: DB_PROVIDER
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX_NAME
+        sync: false
+      - key: SIMLI_ENABLED
+        sync: false
+      - key: SIMLI_API_KEY
+        sync: false
+      - key: SIMLI_FACE_ID
+        sync: false
+      # Snowflake (if DB_PROVIDER=snowflake)
+      - key: SNOWFLAKE_ACCOUNT
+        sync: false
+      - key: SNOWFLAKE_USER
+        sync: false
+      - key: SNOWFLAKE_PASSWORD
+        sync: false
+      - key: SNOWFLAKE_DATABASE
+        sync: false
+      - key: SNOWFLAKE_SCHEMA
+        sync: false
+      - key: SNOWFLAKE_WAREHOUSE
+        sync: false
+      - key: SNOWFLAKE_ROLE
+        sync: false
+
+services:
+  # ── FastAPI ───────────────────────────────────────────────────────────────
+  - type: web
+    name: interviewer-api
+    runtime: docker
+    rootDir: backend
+    plan: starter
+    region: oregon
+    healthCheckPath: /api/v1/health
+    envVars:
+      - fromGroup: interviewer-backend
+    disk:
+      name: interviewer-storage
+      mountPath: /app/storage
+      sizeGB: 1
+
+  # ── RQ background jobs (resume ingest, reports) ───────────────────────────
+  - type: worker
+    name: interviewer-rq-worker
+    runtime: docker
+    rootDir: backend
+    plan: starter
+    region: oregon
+    dockerCommand: python -m app.jobs.worker
+    envVars:
+      - fromGroup: interviewer-backend
+
+  # ── LiveKit voice agent + Simli avatar (must run 24/7) ────────────────────
+  - type: worker
+    name: interviewer-livekit-agent
+    runtime: docker
+    rootDir: backend
+    plan: starter
+    region: oregon
+    dockerCommand: python -m app.livekit_agent.worker start
+    envVars:
+      - fromGroup: interviewer-backend
+
+  # ── React frontend (static) ───────────────────────────────────────────────
+  - type: web
+    name: interviewer-web
+    runtime: static
+    rootDir: web
+    buildCommand: corepack enable && pnpm install && pnpm build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+      - key: VITE_WS_BASE_URL
+        sync: false
