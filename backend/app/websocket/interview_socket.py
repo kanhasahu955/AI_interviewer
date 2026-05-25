@@ -111,6 +111,21 @@ async def _relay_pubsub(websocket: WebSocket, interview_id: int) -> None:
         pubsub.subscribe(*channels)
     except Exception as exc:
         logger.warning("redis pubsub unavailable: %s", exc)
+        try:
+            await websocket.send_json(
+                {
+                    "channel": "system",
+                    "data": {
+                        "role": "system",
+                        "content": (
+                            "Live transcript/proctor updates unavailable — Redis is not running. "
+                            "Start Redis: `make redis-up` (local) or check the redis container (production)."
+                        ),
+                    },
+                }
+            )
+        except Exception:
+            pass
         return
 
     loop = asyncio.get_running_loop()

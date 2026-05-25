@@ -45,6 +45,8 @@ async def consume_video(
                 continue
             last = now
             frame = event.frame
+            if frame.width < 64 or frame.height < 64:
+                continue
             try:
                 array = _frame_to_ndarray(frame)
             except Exception as exc:
@@ -63,23 +65,37 @@ async def consume_video(
 
 def _frame_to_ndarray(frame) -> np.ndarray:
     """Convert a LiveKit VideoFrame to a BGR ndarray for OpenCV consumption."""
+    import cv2
+
     try:
         from livekit import rtc
 
         if hasattr(frame, "convert"):
             converted = frame.convert(rtc.VideoBufferType.BGR24)
+            w, h = converted.width, converted.height
             data = bytes(converted.data)
-            h, w = converted.height, converted.width
-            arr = np.frombuffer(data, dtype=np.uint8).reshape((h, w, 3))
-            return arr
-    except Exception:
-        pass
+            expected = w * h * 3
+            if len(data) >= expected:
+                return (
+                    np.frombuffer(data, dtype=np.uint8, count=expected)
+                    .reshape((h, w, 3))
+                    .copy()
+                )
+    except Exception as exc:
+        logger.debug("BGR24 convert failed: %s", exc)
 
-    data = bytes(frame.data)
-    h, w = frame.height, frame.width
-    arr = np.frombuffer(data, dtype=np.uint8)
-    if arr.size == h * w * 3:
-        return arr.reshape((h, w, 3))
-    if arr.size == h * w * 4:
-        return arr.reshape((h, w, 4))[:, :, :3]
-    raise ValueError(f"Unexpected frame buffer size: {arr.size} for {w}x{h}")
+    w, h = frame.width, frame.height
+    data = np.frombuffer(bytes(frame.data), dtype=np.uint8)
+    rgb_size = h * w * 3
+    i420_size = h * w * 3 // 2
+
+    if data.size == rgb_size:
+        return data.reshape((h, w, 3)).copy()
+    if data.size == h * w * 4:
+        return data.reshape((h, w, 4))[:, :, :3].copy()
+    # LiveKit often ships I420 (1280×720 → 1382400 bytes)
+    if data.size == i420_size:
+        yuv = data.reshape((h * 3 // 2, w))
+        return cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_I420)
+
+    raise ValueError(f"Unexpected frame buffer size: {data.size} for {w}x{h}")

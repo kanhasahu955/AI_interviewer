@@ -74,6 +74,19 @@ export function InterviewRoomPage() {
   }, [dispatch, interviewId, sessionActive])
 
   useEffect(() => {
+    if (!Number.isFinite(interviewId) || !sessionActive) return
+    const refreshProctor = () => {
+      proctoringService
+        .listEvents(interviewId)
+        .then((events) => dispatch(interviewsActions.setProctorEvents(events)))
+        .catch(() => undefined)
+    }
+    refreshProctor()
+    const id = window.setInterval(refreshProctor, 6000)
+    return () => window.clearInterval(id)
+  }, [dispatch, interviewId, sessionActive])
+
+  useEffect(() => {
     return () => {
       dispatch(interviewsActions.clearLiveKit())
     }

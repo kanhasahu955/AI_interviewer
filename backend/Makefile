@@ -86,8 +86,11 @@ _dev-preflight: $(PID_DIR)
 	@pkill -f "uvicorn main:app" 2>/dev/null || true
 	@pkill -f "app.jobs.worker" 2>/dev/null || true
 	@pkill -f "app.livekit_agent.worker" 2>/dev/null || true
-	@lsof -ti :$(PORT) 2>/dev/null | xargs -r kill -9 2>/dev/null || true
+	@lsof -ti :$(PORT) 2>/dev/null | xargs kill -9 2>/dev/null || true
 	@sleep 1
+	@echo ">> preflight: ensuring Redis is up (required for transcript + proctoring)"
+	@$(PYTHON) -c "import sys; sys.path.insert(0,'.'); from app.core.redis_client import ping_redis; ping_redis()" 2>/dev/null \
+	  || $(MAKE) redis-up
 
 # `make dev` runs all three processes with live, multiplexed logs in the
 # current terminal. A single Ctrl+C stops all of them cleanly.
@@ -215,18 +218,39 @@ mysql-logs: ## Tail MySQL container logs.
 mysql-shell: ## Open a mysql shell inside the container.
 	@docker exec -it $(MYSQL_CONTAINER) mysql -uroot -ppassword interviewer_ai
 
-redis-up: ## Run a local Redis 7 container (port 6379).
-	@if [ -z "$$(docker ps -q -f name=^/$(REDIS_CONTAINER)$$)" ]; then \
-	  docker rm -f $(REDIS_CONTAINER) 2>/dev/null || true; \
-	  echo ">> starting $(REDIS_CONTAINER) on :$(REDIS_PORT)"; \
-	  docker run -d --name $(REDIS_CONTAINER) -p $(REDIS_PORT):6379 redis:7-alpine >/dev/null; \
-	  echo ">> redis ready"; \
-	else \
-	  echo "$(REDIS_CONTAINER) already running"; \
-	fi
+redis-up: ## Run local Redis on :6379 (Docker container, or Homebrew redis-server fallback).
+	@$(PYTHON) -c "import sys; sys.path.insert(0,'.'); from app.core.redis_client import ping_redis; ping_redis()" 2>/dev/null \
+	  && echo "redis already reachable on :$(REDIS_PORT)" \
+	  || { \
+	    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then \
+	      if [ -z "$$(docker ps -q -f name=^/$(REDIS_CONTAINER)$$)" ]; then \
+	        docker rm -f $(REDIS_CONTAINER) 2>/dev/null || true; \
+	        echo ">> starting $(REDIS_CONTAINER) on :$(REDIS_PORT)"; \
+	        docker run -d --name $(REDIS_CONTAINER) -p $(REDIS_PORT):6379 redis:7-alpine >/dev/null; \
+	      else \
+	        echo "$(REDIS_CONTAINER) already running"; \
+	      fi; \
+	    elif command -v redis-server >/dev/null 2>&1; then \
+	      if [ -f $(PID_DIR)/redis.pid ] && kill -0 $$(cat $(PID_DIR)/redis.pid) 2>/dev/null; then \
+	        echo "redis-server already running (pid $$(cat $(PID_DIR)/redis.pid))"; \
+	      else \
+	        echo ">> starting redis-server on :$(REDIS_PORT)"; \
+	        redis-server --daemonize yes --port $(REDIS_PORT) --pidfile $(PID_DIR)/redis.pid; \
+	      fi; \
+	    else \
+	      echo "ERROR: Redis not running. Install Docker or run: brew install redis && brew services start redis"; \
+	      exit 1; \
+	    fi; \
+	    sleep 1; \
+	    $(MAKE) redis-ping; \
+	  }
 
-redis-down: ## Stop the local Redis container.
-	@docker rm -f $(REDIS_CONTAINER) 2>/dev/null && echo "stopped" || echo "not running"
+redis-down: ## Stop the local Redis container or redis-server pid.
+	@docker rm -f $(REDIS_CONTAINER) 2>/dev/null && echo "docker redis stopped" || true
+	@if [ -f $(PID_DIR)/redis.pid ]; then \
+	  kill $$(cat $(PID_DIR)/redis.pid) 2>/dev/null && echo "redis-server stopped" || true; \
+	  rm -f $(PID_DIR)/redis.pid; \
+	fi
 
 quickstart: mysql-up redis-up db-use-mysql db-init ## One-shot: launch mysql + redis, flip .env, create tables. Now run `make dev`.
 	@echo
