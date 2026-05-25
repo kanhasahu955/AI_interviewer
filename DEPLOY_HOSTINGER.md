@@ -141,12 +141,24 @@ After you enable HTTPS, rebuild with `https` / `wss` URLs (defaults already use 
 
 ## 5. Start everything
 
+Build the Docker image **once** (heavy ML deps — needs RAM + swap), then start:
+
 ```bash
 cd backend
-docker compose -f docker-compose.hostinger.yml up -d --build
+
+# If build failed before, add 4 GB swap first (run once):
+sudo bash deploy/hostinger/setup-swap.sh 4
+
+# Build only the api service (worker + livekit reuse the same image)
+docker compose -f docker-compose.hostinger.yml build api
+
+# Start all containers
+docker compose -f docker-compose.hostinger.yml up -d
 ```
 
-First build takes **10–20 minutes** (large Python image).
+Or: `make hostinger-up` from `backend/`.
+
+First build takes **10–20 minutes** (large Python image). Do **not** use `up -d --build` on small VPS — it used to build api/worker/livekit in parallel and run out of memory.
 
 Check status:
 
@@ -220,7 +232,8 @@ make hostinger-ps      # status
 
 | Issue | Fix |
 |-------|-----|
-| `pull access denied for interviewer-ai` | Image is **local only** — run `docker compose -f docker-compose.hostinger.yml build` then `up -d --build` (never `docker pull interviewer-ai`) |
+| `=> CANCELED [worker runtime 4/7] COPY --from=builder /opt/venv` | **Not the real error** — scroll up for `Killed`, `OOM`, or `uv sync` failure in the **builder** stage. Add swap (`setup-swap.sh 4`), then `docker compose ... build api` (one build only). |
+| `pull access denied for interviewer-ai` | Image is **local only** — run `docker compose -f docker-compose.hostinger.yml build api` then `up -d` (never `docker pull interviewer-ai`) |
 | Build freezes at `uv venv` / `virtualenv` | VPS out of RAM — run `sudo bash deploy/hostinger/setup-swap.sh 4` then rebuild; or build on Mac with `deploy/hostinger/build-and-export.sh` and `docker load` on VPS |
 | 502 from nginx | `docker compose ... logs api` — wait for health check |
 | Agent not speaking | `logs livekit-agent` — look for `Simli avatar video live` |

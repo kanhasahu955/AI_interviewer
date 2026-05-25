@@ -307,8 +307,9 @@ HOSTINGER_COMPOSE := docker compose -f docker-compose.hostinger.yml
 hostinger-build-web: ## Build React app for same-origin nginx deploy.
 	@bash deploy/hostinger/build-frontend.sh
 
-hostinger-up: env-check ## Hostinger VPS: build images + start redis/api/worker/livekit/nginx.
-	$(HOSTINGER_COMPOSE) up -d --build
+hostinger-up: env-check ## Hostinger VPS: build image once, then start stack.
+	$(HOSTINGER_COMPOSE) build api
+	$(HOSTINGER_COMPOSE) up -d
 
 hostinger-down: ## Stop Hostinger stack.
 	$(HOSTINGER_COMPOSE) down

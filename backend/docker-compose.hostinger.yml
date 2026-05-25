@@ -15,12 +15,12 @@ services:
       timeout: 3s
       retries: 5
 
+  # Build the image once here; worker + livekit-agent reuse interviewer-ai:latest.
   api:
     build:
       context: .
       dockerfile: Dockerfile
     image: interviewer-ai:latest
-    pull_policy: build
     platform: linux/amd64
     restart: unless-stopped
     env_file:
@@ -43,9 +43,6 @@ services:
       start_period: 30s
 
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
     image: interviewer-ai:latest
     pull_policy: never
     platform: linux/amd64
@@ -63,11 +60,10 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      api:
+        condition: service_healthy
 
   livekit-agent:
-    build:
-      context: .
-      dockerfile: Dockerfile
     image: interviewer-ai:latest
     pull_policy: never
     platform: linux/amd64
